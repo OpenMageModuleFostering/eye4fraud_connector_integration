@@ -581,9 +581,10 @@ class Eye4Fraud_Connector_Model_Observer
 
 		if(!count(Mage::app()->getTranslator()->getData())) Mage::app()->getTranslator()->init('adminhtml');
 
-		if($helper->getConfig('general/debug_mode')=='1' and
-			$helper->getConfig('general/debug_file_rotate')=='1'
-			and floatval($helper->getLogSize())>floatval($helper->getConfig('general/debug_file_max_size'))
+		$max_size_reached = filesize($helper->getLogFilePath())>(floatval($helper->getConfig('general/debug_file_max_size'))*1000000);
+		if($helper->getConfig('general/debug_mode')=='1'
+			and $helper->getConfig('general/debug_file_rotate')=='1'
+			and $max_size_reached
 		){
 			$helper->rotateLogFile();
 		}
