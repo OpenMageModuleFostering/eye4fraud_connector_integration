@@ -129,7 +129,7 @@ class Eye4Fraud_Connector_Model_Observer
                 $line_items[$i + 1] = array(
                     'ProductName' => $item->getSku(),
                     'ProductDescription' => $item->getName(),
-                    'ProductSellingPrice' => round($item->getRowTotal(),2),
+                    'ProductSellingPrice' => round($item->getBaseRowTotal(),2),
                     'ProductQty' => round($item->getQtyOrdered(),2),
                     'ProductCostPrice' => round($item->getBasePrice(),2),
                     // todo convert currency
@@ -374,8 +374,8 @@ class Eye4Fraud_Connector_Model_Observer
                 'ShippingEveningPhone' => $shipping->getTelephone(),
                 'ShippingEmail' => $semail,
 
-                'ShippingCost' => round($order->getShippingAmount(),2),
-                'GrandTotal' => round($order->getGrandTotal(),2), // todo convert currency if e4f will be used outside of USA
+                'ShippingCost' => round($order->getBaseShippingAmount(),2),
+                'GrandTotal' => round($order->getBaseGrandTotal(),2), // todo convert currency if e4f will be used outside of USA
                 'CCType' => $helper->convertCcType($card_type),
                 'RawCCType' => $card_type,
                 'CCFirst6' => substr($cc_number, 0, 6),
@@ -574,8 +574,13 @@ class Eye4Fraud_Connector_Model_Observer
 		if($ordersCollection) foreach($ordersCollection as $order){
 			/** @var Eye4Fraud_Connector_Model_Status $item */
 			$item = $statusesCollection->getItemById($order->getIncrementId());
-			$helper->cancelOrder($item, $order);
-			$status_text = $this->_getHelper()->__('status:'.$item->getData('status'));
+			if($item!==null){
+                $helper->cancelOrder($item, $order);
+                $status_text = $this->_getHelper()->__('status:'.$item->getData('status'));
+            }
+            else{
+                $status_text = $this->_getHelper()->__('status:N');
+            }
 			if($order->getData('eye4fraud_status') != $status_text) {
 				$order->setData('eye4fraud_status', $status_text);
 			}

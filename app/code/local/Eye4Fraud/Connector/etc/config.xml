@@ -10,7 +10,7 @@
 <config>
     <modules>
         <Eye4Fraud_Connector>
-            <version>1.2.8</version>
+            <version>1.2.9</version>
         </Eye4Fraud_Connector>
     </modules>
     <global>
@@ -56,14 +56,6 @@
                     </connector_observer>
                 </observers>
             </sales_order_grid_collection_load_after>
-            <!--<sales_order_resource_init_virtual_grid_columns>-->
-                <!--<observers>-->
-                    <!--<eye4fraud_salesgrid>-->
-                        <!--<model>eye4fraud_connector/observer_sales_grid</model>-->
-                        <!--<method>addColumnToResource</method>-->
-                    <!--</eye4fraud_salesgrid>-->
-                <!--</observers>-->
-            <!--</sales_order_resource_init_virtual_grid_columns>-->
         </events>
         <models>
             <eye4fraud_connector>
@@ -106,13 +98,6 @@
                 </setup>
             </eye4fraud_setup>
         </resources>
-        <!--<blocks>-->
-            <!--<adminhtml>-->
-                <!--<rewrite>-->
-                    <!--<sales_order_grid>Eye4Fraud_Connector_Block_Sales_Order_Grid</sales_order_grid>-->
-                <!--</rewrite>-->
-            <!--</adminhtml>-->
-        <!--</blocks>-->
     </global>
     <default>
         <eye4fraud_connector>

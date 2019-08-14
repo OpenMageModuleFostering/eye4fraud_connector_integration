@@ -79,7 +79,8 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
 
 		$this->exceptStatuses($finalStatuses)
 			->updatedBefore($maxDate)->notOlderThan($minDate, $minDateNoOrder)
-			->limitRecordsCount(50)->setCronFlag(true);
+			->limitRecordsCount(100)->setCronFlag(true);
+		$this->getSelect()->order('order_id DESC');
 
 		return $this;
 	}
