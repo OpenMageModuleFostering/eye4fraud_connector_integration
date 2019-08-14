@@ -3,10 +3,10 @@
     "type": "magento-module",
     "license": "OSL",
     "homepage": "",
-    "description": "Order verification and insuring system",
+    "description": "Eye4Fraud – Ecommerce fraud prevention at its finest. Backed by 100% money back guarantee.",
     "authors": [
     {
-        "name": "info",
+        "name": "Shloimy Stauber",
         "email": "info@eye4fraud.com"
     }
 ],
