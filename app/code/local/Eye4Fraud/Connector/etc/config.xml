@@ -10,7 +10,7 @@
 <config>
     <modules>
         <Eye4Fraud_Connector>
-            <version>1.2.3</version>
+            <version>1.2.4</version>
         </Eye4Fraud_Connector>
     </modules>
     <global>
