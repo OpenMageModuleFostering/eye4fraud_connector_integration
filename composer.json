@@ -1,0 +1,16 @@
+{
+    "name": "OpenMageModuleFostering/Eye4Fraud_Connector_integration",
+    "type": "magento-module",
+    "license": "OSLv3.0",
+    "homepage": "",
+    "description": "Eye4Fraud Connector",
+    "authors": [
+    {
+        "name": "Eye4Fraud",
+        "email": "info@eye4fraud.com"
+    }
+],
+    "suggest": {
+        "magento-hackathon/magento-composer-installer": "*"
+    }
+}
