@@ -243,6 +243,30 @@ class Eye4Fraud_Connector_Model_Observer
                     $card_type = $payment->getData('cc_type');
                     break;
                 }
+				case Mage_Paypal_Model_Config::METHOD_WPP_EXPRESS:
+				case Mage_Paypal_Model_Config::METHOD_WPP_PE_EXPRESS:{
+					// Workaround about shipping name in one string
+					if(!$shipping->getLastname()){
+						$firstname_match = strpos($shipping->getFirstname(), $billing->getFirstname())!==false;
+						$lastname_match = strpos($shipping->getFirstname(), $billing->getLastname())!==false;
+						if($firstname_match and $lastname_match){
+							$shipping->setFirstname($billing->getFirstname());
+							$shipping->setLastname($billing->getLastname());
+						}
+						else{
+							$parts = explode(" ", $shipping->getFirstname());
+							if(count($parts)==2){
+								$shipping->setFirstname($parts[0]);
+								$shipping->setLastname($parts[1]);
+							}
+						}
+					}
+					$transId = $payment->getLastTransId();
+					if ($helper->badTransId($transId)) {
+						$transId = $payment->getCcTransId();
+					}
+					break;
+				}
                 default:
                     $transId = $payment->getLastTransId();
                     if ($helper->badTransId($transId)) {
@@ -285,6 +309,9 @@ class Eye4Fraud_Connector_Model_Observer
             if ($bemail && !$semail) {
                 $semail = $bemail;
             }
+
+            /** Clear cc number if it not right */
+			$cc_number = preg_replace("/\D*/",'',$cc_number);
 
             $shippingMethod = $order->getShippingMethod(false);
             $post_array = array(
@@ -469,7 +496,11 @@ class Eye4Fraud_Connector_Model_Observer
                 }
             }
             else{
+				$helper->log("Prepare and queue request for order #".$post_array['OrderNumber']);
                 $this->_getHelper()->prepareRequest($post_array, $payment_method);
+                $status = Mage::getModel('eye4fraud_connector/status');
+				$status->createQueued($post_array['OrderNumber']);
+				$status->save();
             }
         } catch (Exception $e) {
             $this->_getHelper()->log($e->getMessage() . "\n" . $e->getTraceAsString());
@@ -481,8 +512,7 @@ class Eye4Fraud_Connector_Model_Observer
      * Returns the module helper. Initializes one if not already set.
      * @return Eye4fraud_Connector_Helper_Data $this->_helper
      */
-    protected function _getHelper()
-    {
+    protected function _getHelper(){
         if (empty($this->_helper)) {
             $this->_helper = Mage::helper("eye4fraud_connector");
         }
@@ -493,12 +523,11 @@ class Eye4Fraud_Connector_Model_Observer
      * Prepare fraud statuses to display in orders grid
      * @param array $event
      */
-    public function prepareFraudStatuses($event)
-    {
+    public function prepareFraudStatuses($event){
         if (!Mage::helper('core/data')->isModuleOutputEnabled('Eye4Fraud_Connector')) return;
         if (!$this->_getHelper()->isEnabled()) return;
 
-        /** @var Mage_Sales_Model_Resource_Order_Grid_Collection $collectiong */
+        /** @var Mage_Sales_Model_Resource_Order_Grid_Collection $collection */
         $ordersCollection = $event['order_grid_collection'];
         $statuses = array();
         foreach ($ordersCollection as $order) $statuses[$order['increment_id']] = 0;
@@ -521,16 +550,10 @@ class Eye4Fraud_Connector_Model_Observer
 
         if(!$helper->getConfig("cron_settings/enabled")) return;
 
-        $finalStatuses = $helper->getFinalStatuses();
-        $requestInterval = $helper->getConfig("cron_settings/update_interval");
-        $requestInterval || $requestInterval = 60;
-        $maxDate = Mage::getModel('core/date')->date('Y-m-d H:i:s', time() - $requestInterval*60);
-
         $statusesCollection = Mage::getResourceSingleton('eye4fraud_connector/status_collection');
-        $statusesCollection->exceptStatuses($finalStatuses)
-            ->notOlderThan($maxDate)->limitRecordsCount(50)->setCronFlag(true);
+        $statusesCollection->prepareCronUpdateQuery();
         $records_count = $statusesCollection->count();
-        $helper->log("Found records to process ".json_encode($records_count));
+        $helper->log("Processed records: ".json_encode($records_count));
 
         $helper->log("Cron job finished ".date("d-m-Y H:i"));
     }
@@ -540,6 +563,7 @@ class Eye4Fraud_Connector_Model_Observer
      */
     public function sendRequestsManual(){
         $helper = Mage::helper('eye4fraud_connector');
+		$helper->log("Start from orders grid");
         $helper->log("Send request manually");
 
         $helper->sendRequests();

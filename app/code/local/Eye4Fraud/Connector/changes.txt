@@ -1,0 +1,16 @@
+
+
+Changes list:
+
+1.2.3:
+- Fraud status created when order request is cached
+- Timeout added for non-final statuses and for orders which isn't sent to eye4fraud, this fix overflow issue for unprocessed orders
+- Changed internal logic for statuses, now they are saved to DB everytime
+- Access to logfile added to extension settings
+- Short info about extension cron task added to extension settings
+
+1.2.1:
+- Clear received card number from non-digits before extracting first 6 digits
+
+
+1.2.0;

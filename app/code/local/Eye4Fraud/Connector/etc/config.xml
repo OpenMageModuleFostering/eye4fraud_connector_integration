@@ -10,7 +10,7 @@
 <config>
     <modules>
         <Eye4Fraud_Connector>
-            <version>1.2.0</version>
+            <version>1.2.3</version>
         </Eye4Fraud_Connector>
     </modules>
     <global>
@@ -20,7 +20,7 @@
             </eye4fraud_connector>
         </helpers>
         <events>
-            <controller_action_postdispatch_adminhtml_sales_order_index>
+            <controller_action_predispatch_adminhtml_sales_order_index>
                 <observers>
                     <connector_observer>
                         <type>singleton</type>
@@ -28,7 +28,7 @@
                         <method>sendRequestsManual</method>
                     </connector_observer>
                 </observers>
-            </controller_action_postdispatch_adminhtml_sales_order_index>
+            </controller_action_predispatch_adminhtml_sales_order_index>
             <sales_order_place_after>
                 <observers>
                     <connector_observer>
@@ -116,12 +116,28 @@
     </global>
     <default>
         <eye4fraud_connector>
+            <general>
+                <enabled>1</enabled>
+                <update_limit>7</update_limit>
+                <update_limit_no_order>2</update_limit_no_order>
+            </general>
             <cron_settings>
-                <enabled>0</enabled>
-                <update_interval>60</update_interval>
+                <enabled>1</enabled>
+                <update_interval>10</update_interval>
             </cron_settings>
         </eye4fraud_connector>
     </default>
+    <admin>
+        <routers>
+            <adminhtml>
+                <args>
+                    <modules>
+                        <eye4fraud after="Mage_Adminhtml">Eye4Fraud_Connector</eye4fraud>
+                    </modules>
+                </args>
+            </adminhtml>
+        </routers>
+    </admin>
     <adminhtml>
         <translate>
             <modules>

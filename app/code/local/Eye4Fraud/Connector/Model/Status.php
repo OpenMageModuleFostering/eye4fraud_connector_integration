@@ -9,10 +9,8 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
 {
     protected $_eventPrefix = 'eye4fraud_connector_status';
 
-    protected function _construct()
-    {
+    protected function _construct(){
         $this->_init('eye4fraud_connector/status');
-        $this->_dataSaveAllowed = false;
     }
 
     /**
@@ -30,10 +28,14 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
         if(isset($fraudData['error']) and $fraudData['error']){
             $this->setData('error', true);
         }
-
-        $this->setData('status', $fraudData['StatusCode']);
+        $status = $fraudData['StatusCode'];
+		if($fraudData['StatusCode']=='E' and strpos($fraudData['Description'], 'No Order')!==false){
+			$status = 'N';
+		}
+        $this->setData('status', $status);
         $this->setData('description', $fraudData['Description']);
         $this->setData('updated_at', Mage::getModel('core/date')->date('Y-m-d H:i:s'));
+        if(!$this->getOrigData('created_at')) $this->setData('created_at', Mage::getModel('core/date')->date('Y-m-d H:i:s'));
         /**
          * A little hack to restore order_id field after model was saved
          */
@@ -42,6 +44,30 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
         $this->setData('order_id',$tmp_order_id);
         return $this;
     }
+
+	/**
+	 * Create queued status after request was cached
+	 * @param string $order_id
+	 * @return $this
+	 */
+    public function createQueued($order_id){
+		$this->setData('order_id', $order_id);
+		$this->setData('status', 'Q');
+		$this->setData('description', 'Request Queued');
+		$this->setData('updated_at', Mage::getModel('core/date')->date('Y-m-d H:i:s'));
+		$this->setData('created_at', Mage::getModel('core/date')->date('Y-m-d H:i:s'));
+		$this->isObjectNew(true);
+		return $this;
+	}
+
+	/**
+	 * Changes status to Awaiting Response and allow to save
+	 */
+	public function setWaitingStatus(){
+    	$this->setData('status', 'W');
+		$this->setData('description', 'Waiting Update');
+		return $this;
+	}
 
     /**
      * Set or get flag is object new
@@ -53,22 +79,4 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
         return parent::isObjectNew($flag);
     }
 
-    protected function _beforeSave(){
-        parent::_beforeSave();
-        $saveStatuses = Mage::helper('eye4fraud_connector')->getFinalStatuses();
-        if(in_array($this->getData('status'), $saveStatuses)) $this->_dataSaveAllowed = true;
-        $cron_enabled = Mage::helper('eye4fraud_connector')->getConfig('cron_settings/enabled');
-        if($cron_enabled)  $this->_dataSaveAllowed = true;
-        if($this->isEmpty()){
-            /** @var Eye4Fraud_Connector_Model_Status $statusObject */
-            $statusObject = Mage::getModel('eye4fraud_connector/status');
-            $statusObject->load($this->getData('order_id'));
-            if(!$statusObject->isEmpty()){
-                Mage::helper("eye4fraud_connector")->log('Order #'.$this->getData('order_id').' already inserted');
-                $this->setData($statusObject->getData());
-                $this->_dataSaveAllowed = false;
-            }
-        }
-        return $this;
-    }
 }

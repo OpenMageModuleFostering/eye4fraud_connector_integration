@@ -24,7 +24,7 @@ class Eye4Fraud_Connector_Helper_Data
      * List of statuses allowed to save in DB
      * @var array
      */
-    protected $finalStatuses = array('A','D','I','C','F','M','INV','ALW');
+    protected $finalStatuses = array('A','D','I','C','F','M','INV','ALW', 'Q');
 
 	/**
 	 * Returns store config item
@@ -60,6 +60,20 @@ class Eye4Fraud_Connector_Helper_Data
         Mage::log($txt, null, $this->_logFile, $force);
     }
 
+	/**
+	 * Get log file size
+	 * @return int|string
+	 */
+	public function getLogSize() {
+    	$log_file_path = Mage::getBaseDir('log').'/'.$this->_logFile;
+    	if(!file_exists($log_file_path)) return 0;
+		return $this->fileSizeConvert(filesize($log_file_path));
+    }
+
+    public function getLogFilePath(){
+		return Mage::getBaseDir('log').'/'.$this->_logFile;
+	}
+
     /**
      * Checks config to see if module is enabled
      * @return boolean 
@@ -71,7 +85,7 @@ class Eye4Fraud_Connector_Helper_Data
     	}
 
     	$config = $this->getConfig();
-    	return !isset($config['api_settings']['enabled']) ? false : (bool)$config['api_settings']['enabled'];
+    	return !isset($config['general']['enabled']) ? false : (bool)$config['general']['enabled'];
     }
 
     /**
@@ -88,7 +102,7 @@ class Eye4Fraud_Connector_Helper_Data
      */
     public function isDebug(){
     	$config = $this->getConfig();
-    	return !isset($config['api_settings']['debug_mode']) ? false : (bool)$config['api_settings']['debug_mode'];
+    	return !isset($config['general']['debug_mode']) ? false : (bool)$config['general']['debug_mode'];
     }
 
     /**
@@ -456,7 +470,7 @@ class Eye4Fraud_Connector_Helper_Data
         curl_close($ch);
 
         //Log $code for bad response if in debug mode
-        if ($response != 'ok') {
+        if ($code != 200) {
             $this->log("=== E4F Observer::send() Error, \$response NOT ok ===");
             $this->log("Code: $code");
         }
@@ -486,14 +500,22 @@ class Eye4Fraud_Connector_Helper_Data
         /** @var Eye4Fraud_Connector_Model_Resource_Requests_Cache_Collection $cache */
         $cache = Mage::getResourceModel('eye4fraud_connector/requests_cache_collection');
         $cache->addFieldToFilter('attempts',array('lt'=>$this->_request_attempts));
-        $cache->addFieldToFilter('sent_time', array('lt'=>Mage::getModel('core/date')->date('Y-m-d H:i:s',time() - $this->_request_sent_delay*60)));
+        $cache->addFieldToFilter('sent_time', array('lt'=>Mage::getModel('core/date')->date('Y-m-d H:i:s',time()-$this->_request_sent_delay*60)));
         $cache->load();
 
         $this->log('Requests to send found: '.$cache->count());
         foreach($cache as $request){
+        	$request_data = unserialize($request->getData('request_data'));
             /** @var Eye4Fraud_Connector_Model_Request $request */
-            $result = $this->send(unserialize($request->getData('request_data')));
+            $result = $this->send($request_data);
             if($result=='ok'){
+            	$status = Mage::getModel('eye4fraud_connector/status');
+				$status->load($request_data['OrderNumber']);
+				if($status->isEmpty()){
+					$this->log('Status for order #'.$request_data['OrderNumber'].' not found. Create new.');
+					$status->createQueued($request_data['OrderNumber']);
+				}
+				$status->setWaitingStatus()->save();
                 $request->delete();
             }
             else{
@@ -568,4 +590,50 @@ class Eye4Fraud_Connector_Helper_Data
         }
         return $result;
     }
+
+
+	/**
+	 * Converts bytes into human readable file size.
+	 *
+	 * @param string $bytes
+	 * @return string human readable file size (2,87 Мб)
+	 * @author Mogilev Arseny
+	 */
+	protected function fileSizeConvert($bytes){
+		$bytes = floatval($bytes);
+		$arBytes = array(
+			0 => array(
+				"UNIT" => "TB",
+				"VALUE" => pow(1024, 4)
+			),
+			1 => array(
+				"UNIT" => "GB",
+				"VALUE" => pow(1024, 3)
+			),
+			2 => array(
+				"UNIT" => "MB",
+				"VALUE" => pow(1024, 2)
+			),
+			3 => array(
+				"UNIT" => "KB",
+				"VALUE" => 1024
+			),
+			4 => array(
+				"UNIT" => "B",
+				"VALUE" => 1
+			),
+		);
+		$result = $bytes;
+		foreach($arBytes as $arItem)
+		{
+			if($bytes >= $arItem["VALUE"])
+			{
+				$result = $bytes / $arItem["VALUE"];
+				$result = str_replace(".", "," , strval(round($result, 2)))." ".$arItem["UNIT"];
+				break;
+			}
+		}
+		return $result;
+	}
+
 }

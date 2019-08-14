@@ -15,10 +15,18 @@ class Eye4Fraud_Connector_Model_Config_Frontend_Authorizenet extends Mage_Adminh
      */
     public function render(Varien_Data_Form_Element_Abstract $element){
         $model = Mage::helper('payment')->getMethodInstance('authorizenet');
-        $element->setData('checked', is_a($model, 'Eye4Fraud_Connector_Model_Authorizenet'));
-        $element->setData('disabled', 'disabled');
+		$rewrite_status = method_exists($model, 'getResponseData');
+		$element->setData('value', '[dummy]');
+
+		if($rewrite_status){
+			$value = '<img src="'.$this->getSkinUrl('images/fam_bullet_success.gif').'" style="margin-bottom: -5px;">';
+		}
+		else{
+			$value = '<img src="'.$this->getSkinUrl('images/error_msg_icon.gif').'" style="margin-bottom: -5px;">';
+			$element->setData('comment', get_class($model));
+		}
         $html = parent::render($element);
-        if(!is_a($model, 'Eye4Fraud_Connector_Model_Authorizenet')) $html .= '<td colspan="3">Final model class '.get_class($model).'</td>';
+		$html = str_replace('[dummy]', $value, $html);
         return $html;
     }
 

@@ -41,6 +41,32 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
         return $this;
     }
 
+	/**
+	 * Prepare collection for cron update
+	 */
+    public function prepareCronUpdateQuery(){
+		$helper = Mage::helper('eye4fraud_connector');
+
+		$finalStatuses = $helper->getFinalStatuses();
+		$requestInterval = $helper->getConfig("cron_settings/update_interval");
+		$requestInterval || $requestInterval = 60;
+		$maxDate = Mage::getModel('core/date')->date('Y-m-d H:i:s', time() - $requestInterval*60);
+
+		$update_limit = $helper->getConfig("general/update_limit");
+		$update_limit || $update_limit = 5;
+		$minDate = Mage::getModel('core/date')->date('Y-m-d H:i:s', time() - $update_limit*60*60*24);
+
+		$update_limit_no_order = $helper->getConfig("general/update_limit_no_order");
+		$update_limit_no_order || $update_limit_no_order = 2;
+		$minDateNoOrder = Mage::getModel('core/date')->date('Y-m-d H:i:s', time() - $update_limit_no_order*60*60);
+
+		$this->exceptStatuses($finalStatuses)
+			->updatedBefore($maxDate)->notOlderThan($minDate, $minDateNoOrder)
+			->limitRecordsCount(50)->setCronFlag(true);
+
+		return $this;
+	}
+
     /**
      * Select all statuses except
      * @param $statuses
@@ -57,12 +83,17 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
      * @param $timestamp
      * @return $this
      */
-    public function notOlderThan($timestamp){
+    public function updatedBefore($timestamp){
         $this->getSelect()->where('updated_at < ?',$timestamp);
         return $this;
     }
 
-    public function limitRecordsCount($limit){
+	public function notOlderThan($update_limit, $update_limit_no_order){
+		$this->getSelect()->where('(created_at > "'.$update_limit.'" and status!="N") or (created_at > "'.$update_limit_no_order.'" and status="N")');
+		return $this;
+	}
+
+	public function limitRecordsCount($limit){
         $this->getSelect()->limit($limit);
         return $this;
     }
@@ -82,12 +113,15 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
      */
     protected function _afterLoad(){
         parent::_afterLoad();
+//        if($this->_cronFlag) {
+//			Mage::helper("eye4fraud_connector")->log($this->getSelect()->assemble());
+//		}
         $helper = Mage::helper("eye4fraud_connector");
         $isCronEnabled = $helper->getConfig('cron_settings/enabled');
-        $final_statuses = $helper->getFinalStatuses();
+
         foreach ($this->_items as $item) {
             /** @var Eye4Fraud_Connector_Model_Status $item */
-            if((!$isCronEnabled or $this->_cronFlag) and !in_array($item['status'],$final_statuses)){
+            if($this->_cronFlag or (!$isCronEnabled and $this->isItemUpdateAllowed($item))){
                 $this->statuses[$item->getData('order_id')] = 0;
             }
             else $this->statuses[$item->getData('order_id')] = 1;
@@ -110,6 +144,36 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
         }
         return $this;
     }
+
+	/**
+	 * Check if status can be updated by its current status and creation date
+	 * @param Eye4Fraud_Connector_Model_Status $item
+	 * @return bool
+	 */
+    protected function isItemUpdateAllowed($item){
+		$helper = Mage::helper("eye4fraud_connector");
+		$final_statuses = $helper->getFinalStatuses();
+		$is_status_final = in_array($item['status'],$final_statuses);
+
+		$update_allowed_by_date = false;
+		if($item->getData('status')=='N'){
+			$update_limit_no_order = $helper->getConfig("general/update_limit_no_order");
+			$update_limit_no_order || $update_limit_no_order = 2;
+			$minDateNoOrder = time() - $update_limit_no_order*60*60;
+			$created_at = strtotime($item->getData('created_at'));
+			if($created_at > $minDateNoOrder) $update_allowed_by_date = true;
+		}
+		else{
+			$update_limit = $helper->getConfig("general/update_limit");
+			$update_limit || $update_limit = 5;
+			$minDate = time() - $update_limit*60*60*24;
+			$created_at = strtotime($item->getData('created_at'));
+			if($created_at > $minDate) $update_allowed_by_date = true;
+
+		}
+
+		return (!$is_status_final and $update_allowed_by_date);
+	}
 
     /**
      * Get fraud status from status Model
@@ -141,22 +205,36 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
 		$helper = Mage::helper('eye4fraud_connector');
         $description = $fraudStatusItem->getData('description');
 		$updateMinutes = 0;
+		$color = 'inherit';
+		$title = '';
+		if(in_array($fraudStatusItem->getData('status'), $helper->getFinalStatuses())) $color = 'green';
 		if($helper->getConfig('cron_settings/enabled')=="1" and !in_array($fraudStatusItem->getData('status'), $helper->getFinalStatuses())){
 			$currentTimestamp = Mage::getModel('core/date')->timestamp(time());
-			$updateMinutes = round(($currentTimestamp - strtotime($fraudStatusItem->getData('updated_at')))/60,0);
-		}
-        if(!$description or $renderedValue==$description) {
-			if($updateMinutes and $updateMinutes > intval($helper->getConfig('cron_settings/update_interval'))){
+			$updateMinutes = round(($currentTimestamp - strtotime($fraudStatusItem->getData('updated_at')))/60,2);
+			$created_interval = round(($currentTimestamp - strtotime($fraudStatusItem->getData('created_at')))/60/60/24, 3);
+
+			$update_interval = floatval($helper->getConfig('cron_settings/update_interval'));
+			$update_limit = floatval($helper->getConfig('general/update_limit'));
+			if($fraudStatusItem->getData('status')!='N' and $updateMinutes > $update_interval and $created_interval < $update_limit){
 				if($updateMinutes<60) $text = $updateMinutes."m";
 				else{
 					$updateMinutes = round($updateMinutes/60,2);
 					$text = $updateMinutes."h";
 				}
-				return "<span title='Updated ".$text." ago' style='color: red'>".$renderedValue."</span>";
+				$title = "Updated ".$text." ago";
+				$color = "red";
 			}
-			return $renderedValue;
 		}
-        return '<span>'.$renderedValue.'&nbsp;<img style="vertical-align:middle; margin-top:-3px;" src="'.Mage::getDesign()->getSkinUrl('images/i_question-mark.png').'" title="'.$description.'"/></span>';
+		$info_mark = '';
+        if($renderedValue!=$description){
+			$info_mark = '<img style="vertical-align:middle; margin-top:-3px;" src="'.Mage::getDesign()->getSkinUrl('images/i_question-mark.png').'" title="'.$description.'"/>';
+		}
+		//$refresh_button = '<img style="vertical-align:middle; margin-top:-3px;" src="'.Mage::getDesign()->getSkinUrl('images/fam_refresh.gif').'" title="Refresh"/>';
+		$html = '<div><span style="color: '.$color.'" title="'.$title.'">'.$renderedValue.'</span>'.$info_mark.'</div>';
+
+
+		//$html .= '<button type="button"><img src="'.Mage::getDesign()->getSkinUrl('images/fam_refresh.gif').'"></button>';
+        return $html;
     }
 
     /**

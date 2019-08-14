@@ -12,16 +12,14 @@
         <eye4fraud_connector translate="label">
             <label>Eye4Fraud Connector Settings</label>
             <tab>sales</tab>
-            <frontend_type>text</frontend_type>
             <sort_order>1000</sort_order>
             <show_in_default>1</show_in_default>
             <show_in_website>1</show_in_website>
             <show_in_store>1</show_in_store>
             <groups>
-                <api_settings translate="label">
-                    <label>API Settings</label>
-                    <frontend_type>text</frontend_type>
-                    <sort_order>10</sort_order>
+                <general translate="label">
+                    <label>General</label>
+                    <sort_order>5</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
                     <show_in_store>1</show_in_store>
@@ -35,6 +33,54 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
                         </enabled>
+                        <update_limit translate="label,comment">
+                            <label>Stop to update after, days</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>0</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends><enabled>1</enabled></depends>
+                            <comment>Stop to update non-final status after this period</comment>
+                        </update_limit>
+                        <update_limit_no_order translate="label,comment">
+                            <label>Stop to update not found orders, hours</label>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>25</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>0</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends><enabled>1</enabled></depends>
+                            <comment>Stop to update not found in Eye4Fraud service orders</comment>
+                        </update_limit_no_order>
+                        <debug_mode translate="label">
+                            <label>Debug Mode</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>40</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </debug_mode>
+                        <debug_file translate="label">
+                            <label>Debug Log File</label>
+                            <frontend_type>label</frontend_type>
+                            <frontend_model>Eye4Fraud_Connector_Model_Config_Frontend_Logfile</frontend_model>
+                            <sort_order>50</sort_order>
+                            <depends><debug_mode>1</debug_mode></depends>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>0</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </debug_file>
+                    </fields>
+                </general>
+                <api_settings translate="label">
+                    <label>API Settings</label>
+                    <sort_order>10</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
                         <api_site_name translate="label">
                             <label>API Site Name</label>
                             <frontend_type>text</frontend_type>
@@ -59,21 +105,11 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>0</show_in_store>
                         </api_key>
-                        <debug_mode translate="label">
-                            <label>Debug Mode</label>
-                            <frontend_type>select</frontend_type>
-                            <source_model>adminhtml/system_config_source_yesno</source_model>
-                            <sort_order>10</sort_order>
-                            <show_in_default>1</show_in_default>
-                            <show_in_website>1</show_in_website>
-                            <show_in_store>0</show_in_store>
-                        </debug_mode>
                     </fields>
                 </api_settings>
                 <cron_settings translate="label,comment">
                     <label>Cron Settings</label>
                     <comment>Eye4Fraud status will be cached for orders and updated by cron</comment>
-                    <frontend_type>text</frontend_type>
                     <sort_order>15</sort_order>
                     <show_in_default>1</show_in_default>
                     <show_in_website>1</show_in_website>
@@ -95,13 +131,24 @@
                             <show_in_default>1</show_in_default>
                             <show_in_website>0</show_in_website>
                             <show_in_store>0</show_in_store>
+                            <depends><enabled>1</enabled></depends>
                             <comment>Note: cron job is executed each 5 minutes</comment>
                         </update_interval>
+                        <cron_task translate="label">
+                            <label>Cron Task Status</label>
+                            <frontend_type>label</frontend_type>
+                            <frontend_model>Eye4Fraud_Connector_Model_Config_Frontend_Cron</frontend_model>
+                            <sort_order>30</sort_order>
+                            <depends><enabled>1</enabled></depends>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>0</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </cron_task>
                     </fields>
                 </cron_settings>
                 <rewrite_status translate="label,comment">
                     <label>Info for developers</label>
-                    <comment>Information for developers to show class rewrite conflicts. Checkbox enabled if this module successfully rewrite required class</comment>
+                    <comment>Information for developers to show class rewrite conflicts. The current class will be shown on extensions conflict.</comment>
                     <frontend_type>text</frontend_type>
                     <sort_order>50</sort_order>
                     <show_in_default>1</show_in_default>
@@ -110,9 +157,8 @@
                     <fields>
                         <rewrite_grid translate="label">
                             <label>Order Grid Status</label>
-                            <frontend_type>checkbox</frontend_type>
+                            <frontend_type>label</frontend_type>
                             <frontend_model>Eye4Fraud_Connector_Model_Config_Frontend_Grid</frontend_model>
-                            <backend_model>eye4fraud_connector/config_backend_data</backend_model>
                             <sort_order>10</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>0</show_in_website>
@@ -120,9 +166,8 @@
                         </rewrite_grid>
                         <rewrite_payflow translate="label">
                             <label>Payflow Method Status</label>
-                            <frontend_type>checkbox</frontend_type>
+                            <frontend_type>label</frontend_type>
                             <frontend_model>Eye4Fraud_Connector_Model_Config_Frontend_Payflowpro</frontend_model>
-                            <backend_model>eye4fraud_connector/config_backend_data</backend_model>
                             <sort_order>20</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>0</show_in_website>
@@ -130,9 +175,8 @@
                         </rewrite_payflow>
                         <rewrite_authorize_net translate="label">
                             <label>Authorize.net Method Status</label>
-                            <frontend_type>checkbox</frontend_type>
+                            <frontend_type>label</frontend_type>
                             <frontend_model>Eye4Fraud_Connector_Model_Config_Frontend_Authorizenet</frontend_model>
-                            <backend_model>eye4fraud_connector/config_backend_data</backend_model>
                             <sort_order>30</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>0</show_in_website>
@@ -140,9 +184,8 @@
                         </rewrite_authorize_net>
                         <rewrite_paypaluk translate="label">
                             <label>PayFlow Api Nvp class Status</label>
-                            <frontend_type>checkbox</frontend_type>
+                            <frontend_type>label</frontend_type>
                             <frontend_model>Eye4Fraud_Connector_Model_Config_Frontend_Paypaluk</frontend_model>
-                            <backend_model>eye4fraud_connector/config_backend_data</backend_model>
                             <sort_order>40</sort_order>
                             <show_in_default>1</show_in_default>
                             <show_in_website>0</show_in_website>

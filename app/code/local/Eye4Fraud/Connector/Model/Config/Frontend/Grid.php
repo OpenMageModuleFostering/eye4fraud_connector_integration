@@ -16,10 +16,20 @@ class Eye4Fraud_Connector_Model_Config_Frontend_Grid extends Mage_Adminhtml_Bloc
      */
     public function render(Varien_Data_Form_Element_Abstract $element){
         $order_grid = Mage::getBlockSingleton('adminhtml/sales_order_grid');
-        $element->setData('checked', is_a($order_grid, 'Eye4Fraud_Connector_Block_Sales_Order_Grid'));
-        $element->setData('disabled', 'disabled');
-        $html = parent::render($element);;
-        if(!is_a($order_grid, 'Eye4Fraud_Connector_Block_Sales_Order_Grid'))  $html .= '<td colspan="3">Final model class '.get_class($order_grid).'</td>';
+
+		$rewrite_status = is_a($order_grid, 'Eye4Fraud_Connector_Block_Sales_Order_Grid');
+		$element->setData('value', '[dummy]');
+
+		if($rewrite_status){
+			$value = '<img src="'.$this->getSkinUrl('images/fam_bullet_success.gif').'" style="margin-bottom: -5px;">';
+		}
+		else{
+			$value = '<img src="'.$this->getSkinUrl('images/error_msg_icon.gif').'" style="margin-bottom: -5px;">';
+			$element->setData('comment', get_class($order_grid));
+		}
+		$html = parent::render($element);
+		$html = str_replace('[dummy]', $value, $html);
+
         return $html;
     }
 }
