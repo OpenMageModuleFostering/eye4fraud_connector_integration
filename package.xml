@@ -1,18 +1,24 @@
 <?xml version="1.0"?>
 <package>
     <name>Eye4Fraud_Connector_integration</name>
-    <version>1.0.0.3</version>
+    <version>1.1.4</version>
     <stability>stable</stability>
-    <license uri="http://opensource.org/licenses/osl-3.0.php">OSLv3.0</license>
+    <license>OSL</license>
     <channel>community</channel>
     <extends/>
-    <summary>Eye4Fraud Connector</summary>
-    <description>Eye4Fraud Connector</description>
-    <notes>Stable version release</notes>
-    <authors><author><name>Eye4Fraud</name><user>Eye4Fraud</user><email>info@eye4fraud.com</email></author></authors>
-    <date>2014-02-22</date>
-    <time>05:13:07</time>
-    <contents><target name="magelocal"><dir name="Eye4Fraud"><dir name="Connector"><dir name="Helper"><file name="Curl.php" hash="e65f1e319fe21a3b078cc3de88eee011"/><file name="Data.php" hash="56e2f9224104267a3eff3f3082124f7e"/></dir><dir name="Model"><file name="Observer.php" hash="2258b5b08165a1c1c109231f4205a627"/><dir name="Vendor"><file name="authorize.net.class.php" hash="ae6248c195e1e07138f04034949cb84d"/><file name="payflow.class.php" hash="86922ce8ada2bff7c9460acc506929a1"/><file name="usaepay.class.php" hash="1b71ede2d169e1d3af2e3c839d7902b4"/></dir><file name=".DS_Store" hash="de17dabfd37611b77497cfa2135ea389"/></dir><dir name="etc"><file name="adminhtml.xml" hash="9968072302312e95e0598bd58d13d5ef"/><file name="config.xml" hash="3bb275db6b0672e9fe3fe27f386a3b07"/><file name="system.xml" hash="7b6eb0e8d42bb8affcf3180b4489f93d"/></dir><file name=".DS_Store" hash="0cfdc2eb6dc6c67dfe57718f70400b2d"/></dir></dir></target><target name="mageetc"><dir name="modules"><file name="Eye4Fraud_Connector.xml" hash="444bf3d400ab4017c6e81fa4ad5d1463"/></dir></target><target name="magelocale"><dir><dir name="en_US"><dir name="template"><dir name="email"><file name="authorizepopulation.html" hash="62fc1c6c340631ee529e7c486e763cac"/></dir></dir></dir></dir></target></contents>
+    <summary>Order verification and insuring system</summary>
+    <description>Eye4fraud extension is sending the order and payment information to our servers to validate the transaction against fraud.&#xD;
+&#xD;
+The extension could also update the order grid with our decision whether the order is legit or fraud. </description>
+    <notes>Improved speed.&#xD;
+&#xD;
+Added status updated in orders grid.&#xD;
+&#xD;
+Bug fixes. </notes>
+    <authors><author><name>info</name><user>info</user><email>info@eye4fraud.com</email></author></authors>
+    <date>2016-02-14</date>
+    <time>20:26:30</time>
+    <contents><target name="mageetc"><dir name="."><dir name="app"><dir name="etc"><dir name="modules"><file name="Eye4Fraud_Connector.xml" hash=""/></dir></dir></dir></dir></target></contents>
     <compatible/>
-    <dependencies><required><php><min>5.1.0</min><max>6.0.0</max></php><package><name>Mage_Core_Modules</name><channel>community</channel><min>1.6.0.0</min><max>1.9</max></package></required></dependencies>
+    <dependencies><required><php><min>5.3.0</min><max>5.5.0</max></php></required></dependencies>
 </package>

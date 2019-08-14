@@ -1,12 +1,12 @@
 {
     "name": "OpenMageModuleFostering/Eye4Fraud_Connector_integration",
     "type": "magento-module",
-    "license": "OSLv3.0",
+    "license": "OSL",
     "homepage": "",
-    "description": "Eye4Fraud Connector",
+    "description": "Order verification and insuring system",
     "authors": [
     {
-        "name": "Eye4Fraud",
+        "name": "info",
         "email": "info@eye4fraud.com"
     }
 ],
