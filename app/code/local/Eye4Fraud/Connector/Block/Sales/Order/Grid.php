@@ -19,6 +19,9 @@ class Eye4Fraud_Connector_Block_Sales_Order_Grid extends _BaseGridClass
 {
     protected function _prepareColumns()
     {
+    	/** This file is kept for compatibility with some stores which may used it to resolve the rewrite conflict */
+		return parent::_prepareColumns();
+
         if(!Mage::helper('eye4fraud_connector')->isEnabled()) return parent::_prepareColumns();
 
         $this->addColumnAfter('eye4fraud_status', array(

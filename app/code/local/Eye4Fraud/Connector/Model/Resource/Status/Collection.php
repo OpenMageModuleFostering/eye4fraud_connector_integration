@@ -20,6 +20,11 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
      */
     protected $_cronFlag = false;
 
+	/**
+	 * @var Mage_Sales_Model_Resource_Order_Grid_Collection
+	 */
+    protected $ordersGridCollection;
+
     /**
      * Resource initialization
      */
@@ -27,6 +32,18 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
     {
         $this->_init('eye4fraud_connector/status');
     }
+
+	/**
+	 * Set Orders grid collection
+	 * @param Mage_Sales_Model_Resource_Order_Grid_Collection $ordersGridCollection
+	 * @return $this
+	 */
+    public function setOrdersGridCollection($ordersGridCollection){
+		$this->ordersGridCollection = $ordersGridCollection;
+		$this->statuses = array();
+		foreach ($this->ordersGridCollection as $order) $this->statuses[$order['increment_id']] = 0;
+		return $this;
+	}
 
     /**
      * Add attribute id to collection
@@ -89,7 +106,7 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
     }
 
 	public function notOlderThan($update_limit, $update_limit_no_order){
-		$this->getSelect()->where('(created_at > "'.$update_limit.'" and status!="N") or (created_at > "'.$update_limit_no_order.'" and status="N")');
+		$this->getSelect()->where('(created_at > "'.$update_limit.'" and status!="N") or (created_at > "'.$update_limit_no_order.'" and status="N") or status="W"');
 		return $this;
 	}
 
@@ -156,7 +173,10 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
 		$is_status_final = in_array($item['status'],$final_statuses);
 
 		$update_allowed_by_date = false;
-		if($item->getData('status')=='N'){
+		if($item->getData('status')=='W'){
+			$update_allowed_by_date = true;
+		}
+		elseif($item->getData('status')=='N'){
 			$update_limit_no_order = $helper->getConfig("general/update_limit_no_order");
 			$update_limit_no_order || $update_limit_no_order = 2;
 			$minDateNoOrder = time() - $update_limit_no_order*60*60;
@@ -169,7 +189,6 @@ class Eye4Fraud_Connector_Model_Resource_Status_Collection extends Mage_Core_Mod
 			$minDate = time() - $update_limit*60*60*24;
 			$created_at = strtotime($item->getData('created_at'));
 			if($created_at > $minDate) $update_allowed_by_date = true;
-
 		}
 
 		return (!$is_status_final and $update_allowed_by_date);

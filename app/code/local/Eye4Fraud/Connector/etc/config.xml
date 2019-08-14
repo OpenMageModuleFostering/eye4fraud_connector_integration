@@ -10,7 +10,7 @@
 <config>
     <modules>
         <Eye4Fraud_Connector>
-            <version>1.2.4</version>
+            <version>1.2.5</version>
         </Eye4Fraud_Connector>
     </modules>
     <global>
@@ -56,6 +56,14 @@
                     </connector_observer>
                 </observers>
             </sales_order_grid_collection_load_after>
+            <!--<sales_order_resource_init_virtual_grid_columns>-->
+                <!--<observers>-->
+                    <!--<eye4fraud_salesgrid>-->
+                        <!--<model>eye4fraud_connector/observer_sales_grid</model>-->
+                        <!--<method>addColumnToResource</method>-->
+                    <!--</eye4fraud_salesgrid>-->
+                <!--</observers>-->
+            <!--</sales_order_resource_init_virtual_grid_columns>-->
         </events>
         <models>
             <eye4fraud_connector>
@@ -94,25 +102,17 @@
             <eye4fraud_setup>
                 <setup>
                     <module>Eye4Fraud_Connector</module>
+                    <class>Mage_Sales_Model_Resource_Setup</class>
                 </setup>
             </eye4fraud_setup>
         </resources>
-        <blocks>
-            <adminhtml>
-                <rewrite>
-                    <sales_order_grid>Eye4Fraud_Connector_Block_Sales_Order_Grid</sales_order_grid>
-                </rewrite>
-            </adminhtml>
-        </blocks>
-		 <template>
-            <email>
-                <authorizepopulation_email_template translate="label">
-                    <label>Credit Card Number</label>
-                    <file>authorizepopulation.html</file>
-                    <type>html</type>
-                </authorizepopulation_email_template>
-            </email>
-        </template>
+        <!--<blocks>-->
+            <!--<adminhtml>-->
+                <!--<rewrite>-->
+                    <!--<sales_order_grid>Eye4Fraud_Connector_Block_Sales_Order_Grid</sales_order_grid>-->
+                <!--</rewrite>-->
+            <!--</adminhtml>-->
+        <!--</blocks>-->
     </global>
     <default>
         <eye4fraud_connector>
@@ -148,7 +148,26 @@
                 </eye4fraud_connector>
             </modules>
         </translate>
+        <layout>
+            <!-- layout upgrade configuration -->
+            <updates>
+                <eye4fraud_salesgrid module="Eye4Fraud_Connector">
+                    <file>eye4fraud/salesgrid.xml</file>
+                </eye4fraud_salesgrid>
+            </updates>
+        </layout>
     </adminhtml>
+    <frontend>
+        <translate>
+            <modules>
+                <eye4fraud_connector>
+                    <files>
+                        <module>Eye4Fraud_Connector.csv</module>
+                    </files>
+                </eye4fraud_connector>
+            </modules>
+        </translate>
+    </frontend>
     <crontab>
         <jobs>
             <eye4fraud_refresh>

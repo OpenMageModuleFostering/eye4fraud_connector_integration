@@ -41,14 +41,16 @@ class Eye4Fraud_Connector_Model_Config_Frontend_Cron extends Mage_Adminhtml_Bloc
 		if(!$cron_task_pending->isEmpty()){
 			$color = 'green';
 			$tooltip = '';
+			$pending_date_time = 'Not set yet';
 			if($cron_task_pending->getData('scheduled_at')){
 				$pending_interval = strtotime($cron_task_pending->getData('scheduled_at')) - time();
+				$pending_date_time = Mage::getModel('core/date')->date(null, $cron_task_pending->getData('scheduled_at'));
 				if($pending_interval < 0) {
 					$color = 'red';
 					$tooltip = 'Task scheduled time is in the past';
 				}
 			}
-			$value .= '<div>Cron task scheduled at <span style="color: '.$color.'" title="'.$tooltip.'">'.$cron_task_pending->getData('scheduled_at').'</span></div>';
+			$value .= '<div>Cron task scheduled at <span style="color: '.$color.'" title="'.$tooltip.'">'.$pending_date_time.'</span></div>';
 		}
 		else{
 			$value .= '<div>Scheduled cron task <strong>NOT</strong> found</div>';

@@ -2,6 +2,12 @@
 
 Changes list:
 
+1.2.5:
+- Order grid rewrite removed
+- Fraud status added to order and orders grid and can be used by other extensions
+- Behavior of  "Disable Extension Output" setting improved
+- Get IP address from forwarding list
+
 1.2.3:
 - Fraud status created when order request is cached
 - Timeout added for non-final statuses and for orders which isn't sent to eye4fraud, this fix overflow issue for unprocessed orders

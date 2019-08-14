@@ -80,12 +80,9 @@ class Eye4Fraud_Connector_Helper_Data
      */
     public function isEnabled(){
     	// Check if soap client exists - if not, we cannot enable the module
-    	if (!$this->hasSoapClient()){
-    		return false;
-    	}
-
-    	$config = $this->getConfig();
-    	return !isset($config['general']['enabled']) ? false : (bool)$config['general']['enabled'];
+    	if (!$this->hasSoapClient()) return false;
+		if (!Mage::helper('core/data')->isModuleOutputEnabled('Eye4Fraud_Connector')) return false;
+    	return (bool)$this->getConfig('general/enabled');
     }
 
     /**

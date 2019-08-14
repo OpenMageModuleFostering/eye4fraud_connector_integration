@@ -49,6 +49,8 @@ class Eye4Fraud_Connector_Model_Observer
      */
     public function orderPlacedAfter(&$observer)
     {
+		if (!$this->_getHelper()->isEnabled()) return $this;
+
         $order = $observer->getEvent()->getOrder();
         $payment = $order->getPayment();
         if (empty($payment)) {
@@ -220,6 +222,7 @@ class Eye4Fraud_Connector_Model_Observer
                                 if ($card["cc_type"]) {
                                     $card_type = $card["cc_type"];
                                 }
+                                if(!$cc_number && $card['cc_last4']) $cc_number = '000000 '.$card['cc_last4'];
                             }
                         }
                     }
@@ -233,6 +236,7 @@ class Eye4Fraud_Connector_Model_Observer
                     }
                     $cc_number = $payment->getData('cc_number');
                     $card_type = $payment->getData('cc_type');
+					if(!$cc_number && $payment->getData('cc_last4')) $cc_number = '000000 '.$payment->getData('cc_last4');
                     break;
                 case $helper::PAYMENT_METHOD_USAEPAY:{
                     $transId = $payment->getData('cc_trans_id');
@@ -277,6 +281,14 @@ class Eye4Fraud_Connector_Model_Observer
                     break;
             }
             $remoteIp = $order->getRemoteIp() ? $order->getRemoteIp() : false;
+			if($order->getXForwardedFor()) {
+				$forwarded_ips = explode(",", $order->getXForwardedFor());
+				if(isset($forwarded_ips[0]) and $forwarded_ips[0]) {
+					$helper->log('Forwarded address detected: '.$order->getXForwardedFor());
+					$remoteIp = $forwarded_ips[0];
+					$helper->log('Take first address: '.$remoteIp);
+				}
+			}
 
             //Double check we have CC number
             if (empty($cc_number)) {
@@ -397,11 +409,15 @@ class Eye4Fraud_Connector_Model_Observer
                     break;
                 }
                 case Mage_Paypal_Model_Config::METHOD_PAYFLOWPRO:{
+					$post_array["AVSCode"] = 'unknown';
+					$post_array["CIDResponse"] = 'unknown';
                     if(method_exists($method_instance,'getResponseData')){
                         /** @var Eye4Fraud_Connector_Model_Payflowpro $method_instance */
                         $details = $method_instance->getResponseData();
-                        $post_array["AVSCode"] = $details->getData('procavs');
-                        $post_array["CIDResponse"] = $details->getData('proccvv2');
+                        if(is_object($details)){
+							$post_array["AVSCode"] = $details->getData('procavs');
+							$post_array["CIDResponse"] = $details->getData('proccvv2');
+						}
                     }
                     else{
                         $helper->log('Payflow class is wrong: '.get_class($payment).'; Required method not exists', true);
@@ -440,7 +456,9 @@ class Eye4Fraud_Connector_Model_Observer
                     break;
                 }
                 case Mage_Paygate_Model_Authorizenet::METHOD_CODE:{
-                    /** @var Eye4Fraud_Connector_Model_Authorizenet $method_instance */
+					$post_array["AVSCode"] = 'unknown';
+					$post_array["CIDResponse"] = 'unknown';
+					/** @var Eye4Fraud_Connector_Model_Authorizenet $method_instance */
                     if(method_exists($method_instance,'getResponseData')){
                         /** @var Mage_Paygate_Model_Authorizenet_Result|array $details */
                         $details = $method_instance->getResponseData();
@@ -498,9 +516,14 @@ class Eye4Fraud_Connector_Model_Observer
             else{
 				$helper->log("Prepare and queue request for order #".$post_array['OrderNumber']);
                 $this->_getHelper()->prepareRequest($post_array, $payment_method);
-                $status = Mage::getModel('eye4fraud_connector/status');
-				$status->createQueued($post_array['OrderNumber']);
-				$status->save();
+                try{
+					$status = Mage::getModel('eye4fraud_connector/status');
+					$status->createQueued($post_array['OrderNumber'])->setOrder($order);
+					$status->save();
+				}
+				catch(Exception $exception){
+					$helper->log("Process order exception: ".$exception->getMessage(), true);
+				}
             }
         } catch (Exception $e) {
             $this->_getHelper()->log($e->getMessage() . "\n" . $e->getTraceAsString());
@@ -524,24 +547,32 @@ class Eye4Fraud_Connector_Model_Observer
      * @param array $event
      */
     public function prepareFraudStatuses($event){
-        if (!Mage::helper('core/data')->isModuleOutputEnabled('Eye4Fraud_Connector')) return;
         if (!$this->_getHelper()->isEnabled()) return;
 
-        /** @var Mage_Sales_Model_Resource_Order_Grid_Collection $collection */
+        /** @var Mage_Sales_Model_Resource_Order_Grid_Collection $ordersCollection */
         $ordersCollection = $event['order_grid_collection'];
-        $statuses = array();
-        foreach ($ordersCollection as $order) $statuses[$order['increment_id']] = 0;
         /** @var Eye4Fraud_Connector_Model_Resource_Status_Collection $statusesCollection */
         $statusesCollection = Mage::getResourceSingleton('eye4fraud_connector/status_collection');
-        $statusesCollection->setStatuses($statuses)->load();
-    }
+        $statusesCollection->setOrdersGridCollection($ordersCollection )->load();
+
+        // Update statuses in the currently loaded orders grid collection
+		/** @var Mage_Sales_Model_Order $order */
+		if($ordersCollection) foreach($ordersCollection as $order){
+			$item = $statusesCollection->getItemById($order->getIncrementId());
+			$status_text = $this->_getHelper()->__('status:'.$item->getData('status'));
+			if($order->getData('eye4fraud_status') != $status_text) {
+				$order->setData('eye4fraud_status', $status_text);
+			}
+		}
+	}
 
     /**
      * Refresh fraud status in cron job
      */
     public function cronRefreshStatus(){
-        if (!Mage::helper('core/data')->isModuleOutputEnabled('Eye4Fraud_Connector')) return;
         if (!$this->_getHelper()->isEnabled()) return;
+
+		if(!count(Mage::app()->getTranslator()->getData())) Mage::app()->getTranslator()->init('adminhtml');
 
         $helper = Mage::helper('eye4fraud_connector');
         $helper->log("Start cron job ".date("d-m-Y H:i"));
@@ -554,6 +585,7 @@ class Eye4Fraud_Connector_Model_Observer
         $statusesCollection->prepareCronUpdateQuery();
         $records_count = $statusesCollection->count();
         $helper->log("Processed records: ".json_encode($records_count));
+		//$helper->log("Query: ".$statusesCollection->getSelect()->assemble());
 
         $helper->log("Cron job finished ".date("d-m-Y H:i"));
     }
@@ -562,6 +594,8 @@ class Eye4Fraud_Connector_Model_Observer
      * Send requests manually from orders page
      */
     public function sendRequestsManual(){
+		if (!$this->_getHelper()->isEnabled()) return;
+
         $helper = Mage::helper('eye4fraud_connector');
 		$helper->log("Start from orders grid");
         $helper->log("Send request manually");

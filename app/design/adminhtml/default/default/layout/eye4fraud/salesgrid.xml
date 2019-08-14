@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<layout>
+    <!-- main layout definition that adds the column -->
+    <add_order_grid_column_eye4fraud ifconfig="eye4fraud_connector/general/enabled">
+        <reference name="sales_order.grid">
+            <action method="addColumnAfter">
+                <columnId>eye4fraud_status</columnId>
+                <arguments module="eye4fraud_connector" translate="Fraud Status" helper="eye4fraud_connector/order_grid/generateFraudColumnDefinition" />
+                <after>status</after>
+            </action>
+        </reference>
+    </add_order_grid_column_eye4fraud>
+    <!-- order grid action -->
+    <adminhtml_sales_order_grid>
+        <!-- apply the layout handle defined above -->
+        <update handle="add_order_grid_column_eye4fraud" />
+    </adminhtml_sales_order_grid>
+    <!-- order grid view action -->
+    <adminhtml_sales_order_index>
+        <!-- apply the layout handle defined above -->
+        <update handle="add_order_grid_column_eye4fraud" />
+    </adminhtml_sales_order_index>
+</layout>

@@ -9,6 +9,18 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
 {
     protected $_eventPrefix = 'eye4fraud_connector_status';
 
+	/**
+	 * Order ID
+	 * @var int
+	 */
+    protected $order_id_saved = 0;
+
+	/**
+	 * Set order matched to this status
+	 * @var null
+	 */
+    protected $order = null;
+
     protected function _construct(){
         $this->_init('eye4fraud_connector/status');
     }
@@ -39,9 +51,9 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
         /**
          * A little hack to restore order_id field after model was saved
          */
-        $tmp_order_id = $this->getData('order_id');
+        $this->order_id_saved = $this->getData('order_id');
         $this->save();
-        $this->setData('order_id',$tmp_order_id);
+        $this->setData('order_id',$this->order_id_saved);
         return $this;
     }
 
@@ -79,4 +91,34 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
         return parent::isObjectNew($flag);
     }
 
+	/**
+	 * Update fraud status in order and in grid after fraud status was changed
+	 * @return Mage_Core_Model_Abstract
+	 */
+    public function _afterSave() {
+    	$require_save = false;
+    	if(!$this->order){
+    		if($this->order_id_saved) $this->order = Mage::getModel('eye4fraud_connector/sales_order')->loadByIncrementId($this->order_id_saved);
+			else $this->order = Mage::getModel('eye4fraud_connector/sales_order')->loadByIncrementId($this->getData('order_id'));
+			$require_save = true;
+		}
+    	$helper = Mage::helper('eye4fraud_connector');
+		$status_text = $helper->__('status:'.$this->getData('status'));
+
+		if(!$this->order->isEmpty() and $this->order->getData('eye4fraud_status') != $status_text) {
+			$this->order->setData('eye4fraud_status', $status_text);
+			$helper->log('Save fraud status '.$status_text.' to order #'.$this->order->getIncrementId());
+			if($require_save) $this->order->save();
+		}
+		return parent::_afterSave();
+	}
+
+	/**
+	 * @param Mage_Sales_Model_Order $order
+	 * @return $this
+	 */
+	public function setOrder($order){
+    	$this->order = $order;
+    	return $this;
+	}
 }
