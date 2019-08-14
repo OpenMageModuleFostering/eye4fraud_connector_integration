@@ -1,13 +1,5 @@
 <?php
 
-if(mageFindClassFile("Some_Other_Class")){
-    /** @noinspection PhpUndefinedClassInspection */
-    class Eye4Fraud_Connector_Model_Authorizenet_Parent extends Some_Other_Class{}
-}
-else{
-    class Eye4Fraud_Connector_Model_Authorizenet_Parent extends Mage_Paygate_Model_Authorizenet{}
-}
-
 /**
  * Extend Authorize.net payment instance to keep access to response data
 
@@ -15,10 +7,12 @@ else{
  * @package     Eye4Fraud_Connector
  * @author      Mikhail Valiushko
  */
-class Eye4Fraud_Connector_Model_Authorizenet extends Eye4Fraud_Connector_Model_Authorizenet_Parent
+class Eye4Fraud_Connector_Model_Authorizenet extends Mage_Paygate_Model_Authorizenet
 {
     /** @var Mage_Paygate_Model_Authorizenet_Result  */
-    protected $_responseData = null;
+    protected $responseData = null;
+	/** @var bool|string Card Number  */
+    protected $cardNumber = false;
 
     /**
      * Post request to gateway and return responce
@@ -28,15 +22,24 @@ class Eye4Fraud_Connector_Model_Authorizenet extends Eye4Fraud_Connector_Model_A
      */
     protected function _postRequest(Varien_Object $request)
     {
-        $this->_responseData = parent::_postRequest($request);
-        return $this->_responseData;
+        $this->responseData = parent::_postRequest($request);
+		$this->cardNumber = $request->getData('x_card_num');
+        return $this->responseData;
     }
 
     /**
      * Return response data
-     * @return array
-     */
+     * @return Mage_Paygate_Model_Authorizenet_Result
+	 */
     public function getResponseData(){
-        return $this->_responseData;
+        return $this->responseData;
     }
+
+	/**
+	 * Return first 6 digits of card
+	 * @return bool|string
+	 */
+    public function getCardNumber(){
+    	return $this->cardNumber;
+	}
 }

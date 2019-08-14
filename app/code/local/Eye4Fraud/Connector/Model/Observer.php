@@ -214,6 +214,16 @@ class Eye4Fraud_Connector_Model_Observer
                         $transId = $payment->getCcTransId();
                     }
                     $cc_number = version_compare($version, $helper::MAGENTO_VERSION_1_7, '<') ? $payment->getData('cc_number_enc') : $payment->getData('cc_number');
+					/** @var Eye4Fraud_Connector_Model_Authorizenet $method_instance */
+					if(!$cc_number and method_exists($method_instance,'getCardNumber')){
+						$cc_number = $method_instance->getCardNumber();
+					}
+
+					// If card number empty then search it in POST directly
+					if (empty($cc_number)) {
+						$cc_number = isset($_POST['payment']['cc_number']) ? $_POST['payment']['cc_number'] : null;
+					}
+
                     $card_type = "";
                     if (version_compare($version, $helper::MAGENTO_VERSION_1_7, ">=")) {
                         $card_type = $payment->getData('cc_type');
