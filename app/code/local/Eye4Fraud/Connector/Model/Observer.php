@@ -17,6 +17,8 @@ class Eye4Fraud_Connector_Model_Observer
      */
     protected $ordersStatuses = array();
 
+    protected $card_save_method_code = 'ccsave';
+
     /**
      * Magento class constructor
      * @return void
@@ -90,6 +92,7 @@ class Eye4Fraud_Connector_Model_Observer
             $helper->log("Payment method name: ".$payment_method);
 
             if(!in_array($payment_method,array(
+            	$this->card_save_method_code,
                 $helper::PAYMENT_METHOD_USAEPAY,
                 Mage_Paypal_Model_Config::METHOD_PAYFLOWPRO,
                 Mage_Paypal_Model_Config::METHOD_WPP_DIRECT,
@@ -330,7 +333,7 @@ class Eye4Fraud_Connector_Model_Observer
                 'SiteName' => $config["api_settings"]['api_site_name'],
                 'ApiLogin' => $config["api_settings"]['api_login'],
                 'ApiKey' => $config["api_settings"]['api_key'],
-                'TransactionId' => $transId,
+                'TransactionId' => is_null($transId)?0:$transId,
                 'OrderDate' => $order->getCreatedAt(),
                 'OrderNumber' => $order->getIncrementId(),
                 'IPAddress' => !empty($remoteIp) ? $remoteIp : $_SERVER['REMOTE_ADDR'],
@@ -367,8 +370,8 @@ class Eye4Fraud_Connector_Model_Observer
                 'RawCCType' => $card_type,
                 'CCFirst6' => substr($cc_number, 0, 6),
                 'CCLast4' => substr($cc_number, -4),
-                'CIDResponse' => $payment->cc_cid_status, //'M',
-                'AVSCode' => $payment->cc_avs_status, //'Y',
+                'CIDResponse' => is_null($payment->cc_cid_status)?'P':$payment->cc_cid_status, //'M',
+                'AVSCode' => is_null($payment->cc_avs_status)?'P':$payment->cc_avs_status, //'Y',
                 'LineItems' => $line_items,
 
                 'ShippingMethod' => $helper->mapShippingMethod($shippingMethod),
@@ -547,7 +550,8 @@ class Eye4Fraud_Connector_Model_Observer
      * @param array $event
      */
     public function prepareFraudStatuses($event){
-        if (!$this->_getHelper()->isEnabled()) return;
+    	$helper = $this->_getHelper();
+        if (!$helper->isEnabled()) return;
 
         /** @var Mage_Sales_Model_Resource_Order_Grid_Collection $ordersCollection */
         $ordersCollection = $event['order_grid_collection'];
@@ -558,7 +562,9 @@ class Eye4Fraud_Connector_Model_Observer
         // Update statuses in the currently loaded orders grid collection
 		/** @var Mage_Sales_Model_Order $order */
 		if($ordersCollection) foreach($ordersCollection as $order){
+			/** @var Eye4Fraud_Connector_Model_Status $item */
 			$item = $statusesCollection->getItemById($order->getIncrementId());
+			$helper->cancelOrder($item, $order);
 			$status_text = $this->_getHelper()->__('status:'.$item->getData('status'));
 			if($order->getData('eye4fraud_status') != $status_text) {
 				$order->setData('eye4fraud_status', $status_text);
@@ -570,11 +576,18 @@ class Eye4Fraud_Connector_Model_Observer
      * Refresh fraud status in cron job
      */
     public function cronRefreshStatus(){
-        if (!$this->_getHelper()->isEnabled()) return;
+    	$helper = $this->_getHelper();
+        if (!$helper->isEnabled()) return;
 
 		if(!count(Mage::app()->getTranslator()->getData())) Mage::app()->getTranslator()->init('adminhtml');
 
-        $helper = Mage::helper('eye4fraud_connector');
+		if($helper->getConfig('general/debug_mode')=='1' and
+			$helper->getConfig('general/debug_file_rotate')=='1'
+			and floatval($helper->getLogSize())>floatval($helper->getConfig('general/debug_file_max_size'))
+		){
+			$helper->rotateLogFile();
+		}
+
         $helper->log("Start cron job ".date("d-m-Y H:i"));
 
         $helper->sendRequests();
@@ -586,6 +599,10 @@ class Eye4Fraud_Connector_Model_Observer
         $records_count = $statusesCollection->count();
         $helper->log("Processed records: ".json_encode($records_count));
 		//$helper->log("Query: ".$statusesCollection->getSelect()->assemble());
+
+		if($helper->getConfig("general/cancel_order")=='1') foreach($statusesCollection as $status){
+			$helper->cancelOrder($status);
+		};
 
         $helper->log("Cron job finished ".date("d-m-Y H:i"));
     }

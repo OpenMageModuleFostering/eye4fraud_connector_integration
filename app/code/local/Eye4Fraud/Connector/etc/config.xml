@@ -10,7 +10,7 @@
 <config>
     <modules>
         <Eye4Fraud_Connector>
-            <version>1.2.5</version>
+            <version>1.2.6</version>
         </Eye4Fraud_Connector>
     </modules>
     <global>
@@ -120,6 +120,11 @@
                 <enabled>1</enabled>
                 <update_limit>7</update_limit>
                 <update_limit_no_order>2</update_limit_no_order>
+                <cancel_order>0</cancel_order>
+                <debug_mode>0</debug_mode>
+                <debug_file_rotate>1</debug_file_rotate>
+                <debug_file_max_size>8</debug_file_max_size>
+                <debug_file_count>3</debug_file_count>
             </general>
             <cron_settings>
                 <enabled>1</enabled>

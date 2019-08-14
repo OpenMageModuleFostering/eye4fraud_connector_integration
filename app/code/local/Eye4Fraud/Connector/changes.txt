@@ -2,6 +2,11 @@
 
 Changes list:
 
+1.2.6
+- Added payment method "Saved CC"
+- New setting "Cancel Order" added to extension configuration. It allow to cancel not completed order if fraud status received
+- Log file rotation
+
 1.2.5:
 - Order grid rewrite removed
 - Fraud status added to order and orders grid and can be used by other extensions

@@ -20,21 +20,32 @@ class Eye4Fraud_Connector_Helper_Data
     const PAYMENT_METHOD_USAEPAY = 'usaepay';
     const MAGENTO_VERSION_1_7 = '1.7';						//This is run through version_compare()
 
+	/**
+	 * Cancelled status equal to cancelled state
+	 * @var string
+	 */
+	protected $cancelledStatus;
+
     /**
      * List of statuses allowed to save in DB
      * @var array
      */
     protected $finalStatuses = array('A','D','I','C','F','M','INV','ALW', 'Q');
 
+    public function __construct() {
+		$sales_config = Mage::getSingleton('sales/order_config');
+		$this->cancelledStatus = $sales_config->getStateDefaultStatus(Mage_Sales_Model_Order::STATE_CANCELED);
+	}
+
 	/**
 	 * Returns store config item
-	 * @param string $str
+	 * @param string $config_path
 	 * @param null $store_id
 	 * @return string
 	 */
-    public function getConfig($str='', $store_id=null)
+    public function getConfig($config_path='', $store_id=null)
     {
-        if($str) return Mage::getStoreConfig('eye4fraud_connector/'.$str, $store_id);
+        if($config_path) return Mage::getStoreConfig('eye4fraud_connector/'.$config_path, $store_id);
     	if (empty($this->_config)){
     		$this->_config = Mage::getStoreConfig('eye4fraud_connector', $store_id);
     	}
@@ -70,6 +81,10 @@ class Eye4Fraud_Connector_Helper_Data
 		return $this->fileSizeConvert(filesize($log_file_path));
     }
 
+	/**
+	 * Get path to log file
+	 * @return string
+	 */
     public function getLogFilePath(){
 		return Mage::getBaseDir('log').'/'.$this->_logFile;
 	}
@@ -81,7 +96,7 @@ class Eye4Fraud_Connector_Helper_Data
     public function isEnabled(){
     	// Check if soap client exists - if not, we cannot enable the module
     	if (!$this->hasSoapClient()) return false;
-		if (!Mage::helper('core/data')->isModuleOutputEnabled('Eye4Fraud_Connector')) return false;
+		if (!$this->isModuleOutputEnabled('Eye4Fraud_Connector')) return false;
     	return (bool)$this->getConfig('general/enabled');
     }
 
@@ -596,7 +611,7 @@ class Eye4Fraud_Connector_Helper_Data
 	 * @return string human readable file size (2,87 Мб)
 	 * @author Mogilev Arseny
 	 */
-	protected function fileSizeConvert($bytes){
+	public function fileSizeConvert($bytes){
 		$bytes = floatval($bytes);
 		$arBytes = array(
 			0 => array(
@@ -633,4 +648,109 @@ class Eye4Fraud_Connector_Helper_Data
 		return $result;
 	}
 
+	/**
+	 * Try to cancel order if fraud is detected
+	 * @param Eye4Fraud_Connector_Model_Status $status_item
+	 * @param Mage_Sales_Model_Order $order
+	 */
+	public function cancelOrder($status_item, $order = null){
+		if($this->getConfig("general/cancel_order")!='1') return;
+
+		if(!is_null($order) and $order->getStatus()==$this->cancelledStatus) return;
+
+		if($status_item->getData('status')=='F'){
+			$this->log('Fraud status detected, cancelling order');
+			if(is_null($order)){
+				$order = Mage::getModel('sales/order');
+				$order->loadByIncrementId($status_item->getData('order_id'));
+			}
+
+			if($order->getStatus()==$this->cancelledStatus) return;
+
+			if(!$order->isEmpty()){
+				if($order->canCancel()){
+					$order->cancel();
+					$this->log('Order cancelled, state '.$order->getState().' status '.$order->getStatus());
+					$order->save();
+				}
+				else{
+					$this->log('Order was not cancelled, state '.$order->getState().' status '.$order->getStatus());
+				}
+			}
+			else{
+				$this->log('Error while loading order #'.$status_item->getData('order_id').' Order was not cancelled');
+			}
+		}
+	}
+
+	/**
+	 * Compress file
+	 * @param string $source Source file
+	 * @param string $dest  Destination file
+	 * @param bool $level Compression level and method
+	 * @return bool|string
+	 */
+	protected function gzCompressFile($source, $dest, $level=false){
+		$mode='wb'.$level;
+		$error=false;
+		if($fp_out=gzopen($dest,$mode)){
+			if($fp_in=fopen($source,'rb')){
+				while(!feof($fp_in))
+					gzwrite($fp_out,fread($fp_in,1024*512));
+				fclose($fp_in);
+			}
+			else $error=true;
+			gzclose($fp_out);
+		}
+		else $error=true;
+		if($error) return false;
+		else return $dest;
+	}
+
+	/**
+	 * Rotate current Log File
+	 */
+	public function rotateLogFile(){
+		$log_files_count = intval($this->getConfig('general/debug_file_count'));
+		// If log files should rotate
+		if($log_files_count>0){
+			// Remove old log file
+			$old_file = $this->getLogFilePath().$log_files_count.'.gz';
+			if(file_exists($old_file)){
+				unlink($old_file);
+				if(file_exists($old_file)){
+					$this->log("Can't remove old log file: ".$old_file);
+					$this->log("Log file rotation stopped");
+					return;
+				}
+			}
+		}
+		else{
+			$log_files_count = 1;
+			while(file_exists($this->getLogFilePath().$log_files_count.'.gz')){
+				$log_files_count++;
+			}
+		}
+		// Rotate other compressed log files
+		for($i=$log_files_count-1; $i > 0; $i--){
+			if(file_exists($this->getLogFilePath().$i.'.gz')) {
+				rename($this->getLogFilePath().$i.'.gz', $this->getLogFilePath().($i+1).'.gz');
+			}
+		}
+		// Compress current log file
+		$this->gzCompressFile($this->getLogFilePath(), $this->getLogFilePath().'1.gz', 5);
+		if(file_exists($this->getLogFilePath().'1.gz')){
+			try{
+				unlink($this->getLogFilePath());
+			}
+			catch (Exception $exception){
+				$this->log("Error while delete log file: ".$exception->getMessage());
+			}
+			$this->log("Log File reached a max size and was compressed");
+		}
+		else{
+			$this->log("Can't compress current log file");
+		}
+
+	}
 }

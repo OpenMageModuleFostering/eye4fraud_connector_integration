@@ -30,7 +30,8 @@ class Eye4Fraud_Connector_Model_Status extends Mage_Core_Model_Abstract
      * @return $this
      */
     public function retrieveStatus(){
-        $fraudData = Mage::helper('eye4fraud_connector')->getOrderStatus($this->getData('order_id'));
+    	$helper = Mage::helper('eye4fraud_connector');
+        $fraudData = $helper->getOrderStatus($this->getData('order_id'));
         if(empty($fraudData)) {
             $this->setData('status', 'RER');
             $this->setData('description', 'Connection Error');
