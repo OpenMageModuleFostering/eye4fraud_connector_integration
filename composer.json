@@ -1,7 +1,7 @@
 {
-    "name": "OpenMageModuleFostering\/Eye4Fraud_Connector_integration",
+    "name": "openmage-module-fostering\/eye4fraud_connector_integration",
     "type": "magento-module",
-    "license": "OSL",
+    "license": "OSL-3.0",
     "homepage": "",
     "description": "Eye4Fraud \u2013 Ecommerce fraud prevention at its finest. Backed by 100% money back guarantee.",
     "authors": [
