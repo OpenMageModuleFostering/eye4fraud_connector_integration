@@ -1,16 +1,19 @@
 {
-    "name": "OpenMageModuleFostering/Eye4Fraud_Connector_integration",
+    "name": "OpenMageModuleFostering\/Eye4Fraud_Connector_integration",
     "type": "magento-module",
     "license": "OSL",
     "homepage": "",
-    "description": "Eye4Fraud – Ecommerce fraud prevention at its finest. Backed by 100% money back guarantee.",
+    "description": "Eye4Fraud \u2013 Ecommerce fraud prevention at its finest. Backed by 100% money back guarantee.",
     "authors": [
-    {
-        "name": "Shloimy Stauber",
-        "email": "info@eye4fraud.com"
-    }
-],
+        {
+            "name": "Shloimy Stauber",
+            "email": "info@eye4fraud.com"
+        }
+    ],
     "suggest": {
-        "magento-hackathon/magento-composer-installer": "*"
-    }
+        "magento-hackathon\/magento-composer-installer": "*"
+    },
+    "keywords": [
+        "openmage-module"
+    ]
 }
